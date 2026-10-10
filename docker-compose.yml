@@ -1,0 +1,34 @@
+services:
+  postgres_db:
+    image: postgres:15-alpine
+    container_name: cfs_postgres_container
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: cf_checker
+      POSTGRES_PASSWORD: CF21@dmin
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cf_checker -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  url_analyzer_app:
+    build: .
+    container_name: cfs_java_app
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    environment:
+      - DB_HOST=postgres_db
+      - DB_USER=cf_checker
+      - DB_PASS=CF21@dmin
+    stdin_open: true
+    tty: true
+
+volumes:
+  pgdata:
